@@ -1,31 +1,46 @@
-# 🏦 Bank System
+# System Bank Online
 
-A simple console-based Bank System built with **Python** and **MySQL**, allowing users to:
+## Description
 
-- Register and log in securely (with hashed passwords using bcrypt)
-- Perform banking operations: deposit, withdraw, transfer
-- View all users
-- Delete users
+System Bank Online is a simple banking system that allows users to create accounts, deposit and withdraw money, and perform transactions. It includes functionalities such as user account management and transaction processing with a MySQL database and Python backend.
 
-## 📁 Project Structure
+## Features
 
+- **Account Management:**
+  - Create new accounts.
+  - View user accounts.
+  - Update account balances.
+  - Delete accounts.
+  - Deposit and withdraw money.
+  
+- **Transaction Management:**
+  - Create transactions between accounts.
+  - View all transactions.
+  - Update transaction types.
+  - Delete transactions.
+  
+- **User Authentication:**
+  - Secure account creation and password handling using `bcrypt` (if implemented in the future).
+  
+## Technologies
 
-## ⚙️ Features
+- **Python:** Backend for handling business logic and database connections.
+- **MySQL:** Database to store user and account information, as well as transactions.
+- **bcrypt:** For securely hashing user passwords (if implemented).
+- **datetime:** To handle timestamps for account creation and transactions.
 
-- 🔐 Secure password hashing with `bcrypt`
-- 📦 Modular structure
-- 💾 MySQL integration
-- 🧪 Easy to extend and test
+## Setup
 
-## 🧰 Requirements
+### Prerequisites
 
 - Python 3.x
-- MySQL server
-- Packages:
-  - `mysql-connector-python`
-  - `bcrypt`
+- MySQL Server
+- Install dependencies via `pip`
 
-Install dependencies:
+### Installation Steps
 
-```bash
-pip install mysql-connector-python bcrypt
+1. **Clone the repo:**
+
+   ```bash
+   git clone https://github.com/A7med-Khedr/bank-system.git
+   cd system-bank-online
