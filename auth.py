@@ -1,13 +1,13 @@
-from datetime import datetime
-from db import connect
+import bcrypt
+from db import connect  # تأكد إنك عندك ملف db.py فيه دالة connect
 
-class Account:
+class User:
     @staticmethod
-    def create(user_id, account_type, initial_balance):
+    def login(email, password):
         connection = connect()
         cursor = connection.cursor()
 
-        cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+        cursor.execute("SELECT id, name, email, password FROM users WHERE email = %s", (email,))
         user = cursor.fetchone()
 
         if not user:
@@ -15,86 +15,69 @@ class Account:
             connection.close()
             return
 
-        cursor.execute("INSERT INTO accounts (user_id, account_type, balance, created_at) VALUES (%s, %s, %s, %s)",
-                       (user_id, account_type, initial_balance, datetime.now()))
+        user_id, name, email, hashed_password = user
 
-        connection.commit()
-        print("account created successfully")
-        connection.close()
-        return True
-
-    @staticmethod
-    def get_user_accounts(user_id):
-        connection = connect()
-        cursor = connection.cursor()
-
-        cursor.execute("SELECT * FROM accounts WHERE user_id = %s", (user_id,))
-        accounts = cursor.fetchall()
-
-        if not accounts:
-            print("no accounts found for this user")
+        if bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8')):
+            print("login successful for user:", name)
+            connection.close()
+            return user_id
         else:
-            for acc in accounts:
-                print(f"Account ID: {acc[0]}, Type: {acc[2]}, Balance: {acc[3]}")
-
-        connection.close()
-        return accounts
+            print("invalid password for the user.")
+            connection.close()
+            return None
 
     @staticmethod
-    def update_balance(account_id, new_balance):
+    def register(name, email, password):
         connection = connect()
         cursor = connection.cursor()
 
-        cursor.execute("UPDATE accounts SET balance = %s WHERE id = %s", (new_balance, account_id))
+        cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+        existing_user = cursor.fetchone()
+
+        if existing_user:
+            print("user email already exists")
+            connection.close()
+            return
+
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+
+        cursor.execute("INSERT INTO users (name, email, password) VALUES (%s, %s, %s)",
+                       (name, email, hashed_password))
+
         connection.commit()
-        print("account balance updated successfully")
+        print("user registered successfully")
         connection.close()
-        return True
 
     @staticmethod
-    def delete(account_id):
+    def delete(email):
         connection = connect()
         cursor = connection.cursor()
 
-        cursor.execute("DELETE FROM accounts WHERE id = %s", (account_id,))
+        cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+        user = cursor.fetchone()
+
+        if not user:
+            print("user not found")
+            connection.close()
+            return
+
+        cursor.execute("DELETE FROM users WHERE email = %s", (email,))
         connection.commit()
-        print("account deleted successfully")
+        print("user deleted successfully")
         connection.close()
-        return True
 
     @staticmethod
-    def get(account_id):
+    def print_all():
         connection = connect()
         cursor = connection.cursor()
-        cursor.execute("SELECT * FROM accounts WHERE id = %s", (account_id,))
-        account = cursor.fetchone()
+
+        cursor.execute("SELECT * FROM users")
+        users = cursor.fetchall()
+
+        if users:
+            for user in users:
+                print("User:", user)
+        else:
+            print("no users found")
+
         connection.close()
-        return account
-
-    @staticmethod
-    def deposit(account_id, amount):
-        account = Account.get(account_id)
-        if not account:
-            print("Account not found.")
-            return False
-
-        new_balance = account[3] + amount
-        Account.update_balance(account_id, new_balance)
-        print(f"Deposited {amount} successfully.")
-        return True
-
-    @staticmethod
-    def withdraw(account_id, amount):
-        account = Account.get(account_id)
-        if not account:
-            print("Account not found.")
-            return False
-
-        if account[3] < amount:
-            print("Insufficient balance.")
-            return False
-
-        new_balance = account[3] - amount
-        Account.update_balance(account_id, new_balance)
-        print(f"Withdrawn {amount} successfully.")
-        return True

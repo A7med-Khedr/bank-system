@@ -1,147 +1,100 @@
+from datetime import datetime
 from db import connect
-from datetime import datetime	
 
-class AccountManager:
-	@staticmethod
-	def get_account(account_id):
-		if not account_id:
-			print("Invalid account ID.")
-			return None
+class Account:
+    @staticmethod
+    def create(user_id, account_type, initial_balance):
+        connection = connect()
+        cursor = connection.cursor()
 
-		with connect() as connection:
-			cursor = connection.cursor()
-			cursor.execute("SELECT * FROM accounts WHERE id = %s", (account_id,))
-			return cursor.fetchone()
+        cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+        user = cursor.fetchone()
 
-	@staticmethod
-	def create_account(user_id, account_type, initial_balance):
-		with connect() as connection:
-			cursor = connection.cursor()
+        if not user:
+            print("user not found")
+            connection.close()
+            return
 
-			cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
-			user = cursor.fetchone()
+        cursor.execute("INSERT INTO accounts (user_id, account_type, balance, created_at) VALUES (%s, %s, %s, %s)",
+                       (user_id, account_type, initial_balance, datetime.now()))
 
-			if not user:
-				print("User not found.")
-				return False
+        connection.commit()
+        print("account created successfully")
+        connection.close()
+        return True
 
-			cursor.execute(
-				"INSERT INTO accounts (user_id, account_type, balance, created_at) VALUES (%s, %s, %s, %s)",
-				(user_id, account_type, initial_balance, datetime.now())
-			)
+    @staticmethod
+    def get_user_accounts(user_id):
+        connection = connect()
+        cursor = connection.cursor()
 
-			connection.commit()
-			print("Account created successfully.")
-			return True
+        cursor.execute("SELECT * FROM accounts WHERE user_id = %s", (user_id,))
+        accounts = cursor.fetchall()
 
-	@staticmethod
-	def get_user_accounts(user_id):
-		if not user_id:
-			print("User ID is required.")
-			return
+        if not accounts:
+            print("no accounts found for this user")
+        else:
+            for acc in accounts:
+                print(f"Account ID: {acc[0]}, Type: {acc[2]}, Balance: {acc[3]}")
 
-		with connect() as connection:
-			cursor = connection.cursor()
-			cursor.execute("SELECT * FROM accounts WHERE user_id = %s", (user_id,))
-			accounts = cursor.fetchall()
+        connection.close()
+        return accounts
 
-			if not accounts:
-				print("No accounts found for this user.")
-				return []
+    @staticmethod
+    def update_balance(account_id, new_balance):
+        connection = connect()
+        cursor = connection.cursor()
 
-			for account in accounts:
-				print(f"Account ID: {account[0]}, Type: {account[2]}, Balance: {account[3]}")
-			
-			return accounts
+        cursor.execute("UPDATE accounts SET balance = %s WHERE id = %s", (new_balance, account_id))
+        connection.commit()
+        print("account balance updated successfully")
+        connection.close()
+        return True
 
-	@staticmethod
-	def update_account_balance(account_id, new_balance):
-		if not account_id:
-			print("Account ID is required.")
-			return False
+    @staticmethod
+    def delete(account_id):
+        connection = connect()
+        cursor = connection.cursor()
 
-		with connect() as connection:
-			cursor = connection.cursor()
-			cursor.execute(
-				"UPDATE accounts SET balance = %s WHERE id = %s",
-				(new_balance, account_id)
-			)
-			connection.commit()
+        cursor.execute("DELETE FROM accounts WHERE id = %s", (account_id,))
+        connection.commit()
+        print("account deleted successfully")
+        connection.close()
+        return True
 
-		print("Account balance updated successfully.")
-		return True
+    @staticmethod
+    def get(account_id):
+        connection = connect()
+        cursor = connection.cursor()
+        cursor.execute("SELECT * FROM accounts WHERE id = %s", (account_id,))
+        account = cursor.fetchone()
+        connection.close()
+        return account
 
-	@staticmethod
-	def delete_account(account_id):
-		if not account_id:
-			print("Account ID is required.")
-			return False
+    @staticmethod
+    def deposit(account_id, amount):
+        account = Account.get(account_id)
+        if not account:
+            print("Account not found.")
+            return False
 
-		with connect() as connection:
-			cursor = connection.cursor()
-			cursor.execute("DELETE FROM accounts WHERE id = %s", (account_id,))
-			connection.commit()
+        new_balance = account[3] + amount
+        Account.update_balance(account_id, new_balance)
+        print(f"Deposited {amount} successfully.")
+        return True
 
-		print("🗑️ Account deleted successfully.")
-		return True
+    @staticmethod
+    def withdraw(account_id, amount):
+        account = Account.get(account_id)
+        if not account:
+            print("Account not found.")
+            return False
 
-	@staticmethod
-	def get_account_by_id(account_id):
-		if not account_id:
-			print("Account ID is required.")
-			return None
+        if account[3] < amount:
+            print("Insufficient balance.")
+            return False
 
-		with connect() as connection:
-			cursor = connection.cursor()
-			cursor.execute("SELECT * FROM accounts WHERE id = %s", (account_id,))
-			account = cursor.fetchone()
-
-			if not account:
-				print("Account not found.")
-				return None
-
-			return account
-
-	@staticmethod
-	def deposit(account_id, amount):
-		account = AccountManager.get_account(account_id)
-		if not account:
-			print("Account not found.")
-			return False
-
-		new_balance = account[3] + amount
-
-		with connect() as connection:
-			cursor = connection.cursor()
-			cursor.execute(
-				"UPDATE accounts SET balance = %s WHERE id = %s",
-				(new_balance, account_id)
-			)
-			connection.commit()
-
-		print(f"💰 Deposited {amount} successfully.")
-		return True
-
-	@staticmethod
-	def withdraw(account_id, amount):
-		account = AccountManager.get_account(account_id)
-		if not account:
-			print("Account not found.")
-			return False
-
-		if account[3] < amount:
-			print("Insufficient balance.")
-			return False
-
-		new_balance = account[3] - amount
-
-		with connect() as connection:
-			cursor = connection.cursor()
-			cursor.execute(
-				"UPDATE accounts SET balance = %s WHERE id = %s",
-				(new_balance, account_id)
-			)
-			connection.commit()
-
-		print(f"💸 Withdrawn {amount} successfully.")
-		return True
+        new_balance = account[3] - amount
+        Account.update_balance(account_id, new_balance)
+        print(f"Withdrawn {amount} successfully.")
+        return True
