@@ -2,7 +2,7 @@ import bcrypt
 from db import connect
 
 class User:
-	
+
 	def __init__(self, connect_func):
 		self.connect_func = connect_func
 
@@ -54,18 +54,20 @@ class User:
 		connection = self.connect_func()
 		cursor = connection.cursor()
 
-		cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+		cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
 		user = cursor.fetchone()
 
-		if not user:
-			print("user not found")
-			connection.close()
-			return
+		if user:
+			user_id = user[0]
 
-		cursor.execute("DELETE FROM users WHERE email = %s", (email,))
-		connection.commit()
-		print("user deleted successfully ✅")
-		connection.close()
+			cursor.execute("DELETE FROM accounts WHERE user_id = %s", (user_id,))
+
+			cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
+
+			connection.commit()
+			print("✅ User and their accounts deleted successfully.")
+		else:
+			print("⚠️ User not found.")
 
 	def print_all(self):
 		connection = self.connect_func()
@@ -82,3 +84,31 @@ class User:
 
 		connection.close()
 
+	def get_all_users(connect_func):
+		connection = connect_func()
+		cursor = connection.cursor()
+
+		try:
+			cursor.execute("SELECT id, name, email, balance FROM users")
+			users = cursor.fetchall()
+
+			if users:
+				print("All Users:\n")
+				for user in users:
+					user_id, name, email, balance = user
+					print(f"""
+						ID:      { user_id }
+						Name:    { name }
+						Email:   { email }
+						Balance: { balance }
+						-----------------------------
+					""")
+			else:
+				print("No users found in the system.")
+
+			return users
+		except Exception as e:
+			print("Error while fetching users:", e)
+			return []
+		finally:
+			connection.close()

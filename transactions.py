@@ -1,61 +1,139 @@
-from db import connect
-class TransactionManager:
+import re
 
+
+class TransactionManager:
+	
 	def __init__(self, connect_func):
 		self.connect_func = connect_func
 
-	def create_transaction(self, sender_account_id, receiver_account_id, amount, transaction_type):
+	def is_valid_email(self, email):
+		email_regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+		return re.match(email_regex, email) is not None
+
+	def get_account_id_by_email(self, email):
 		connection = self.connect_func()
 		cursor = connection.cursor()
 
 		try:
-			if sender_account_id == receiver_account_id:
-				print("Cannot transfer to the same account.")
-				return None
-
-			# Check sender account
-			cursor.execute("SELECT balance FROM accounts WHERE id = %s", (sender_account_id,))
-			sender_balance = cursor.fetchone()
-			if not sender_balance:
-				print("Sender account does not exist.")
-				return None
-
-			# Check receiver account
-			cursor.execute("SELECT balance FROM accounts WHERE id = %s", (receiver_account_id,))
-			receiver_balance = cursor.fetchone()
-			if not receiver_balance:
-				print("Receiver account does not exist.")
-				return None
-
-			if amount <= 0:
-				print("Amount must be greater than 0.")
-				return None
-
-			if sender_balance[0] < amount:
-				print("Insufficient balance.")
-				return None
-
-			# Perform transaction
-			cursor.execute("UPDATE accounts SET balance = balance - %s WHERE id = %s", (amount, sender_account_id))
-			cursor.execute("UPDATE accounts SET balance = balance + %s WHERE id = %s", (amount, receiver_account_id))
-
-			# Record transaction
 			cursor.execute("""
-				INSERT INTO transactions (sender_account_id, receiver_account_id, amount, transaction_type)
-				VALUES (%s, %s, %s, %s)
-			""", (sender_account_id, receiver_account_id, amount, transaction_type))
-
-			connection.commit()
-			print("Transaction successful.")
-			return True
-
+				SELECT accounts.id 
+				FROM accounts 
+				JOIN users ON accounts.user_id = users.id 
+				WHERE users.email = %s
+			""", (email,))
+			account_id = cursor.fetchone()
+			if account_id:
+				return account_id[0]
+			else:
+				return None
 		except Exception as e:
-			connection.rollback()
-			print("Transaction failed:", e)
+			print("Error fetching account ID:", e)
 			return None
-
 		finally:
 			connection.close()
+
+
+	def create_transaction(self, sender_account_id, receiver_account_id, amount, trans_type):
+		connection = self.connect_func()
+		cursor = connection.cursor()
+
+		try:
+			cursor.execute(
+				"INSERT INTO transactions (from_account_id, to_account_id, amount, transaction_type) VALUES (%s, %s, %s, %s)",
+				(sender_account_id, receiver_account_id, amount, trans_type)
+			)
+			connection.commit()
+			print("Transaction created successfully!")
+		except Exception as e:
+			print("Error creating transaction:", e)
+			connection.rollback()
+		finally:
+			connection.close()
+
+	def update_balance(self, account_id, new_balance):
+		connection = self.connect_func()
+		cursor = connection.cursor()
+
+		try:
+			cursor.execute("UPDATE accounts SET balance = %s WHERE id = %s", (new_balance, account_id))
+			connection.commit()
+			print(f"Balance updated successfully for account ID {account_id}")
+		except Exception as e:
+			print("Error updating balance:", e)
+			connection.rollback()
+		finally:
+			connection.close()
+
+	def get_balance(self, account_id):
+		connection = self.connect_func()
+		cursor = connection.cursor()
+
+		try:
+			cursor.execute("SELECT balance FROM accounts WHERE id = %s", (account_id,))
+			balance = cursor.fetchone()
+			if balance:
+				return balance[0]
+			else:
+				print("Account not found!")
+				return None
+		except Exception as e:
+			print("Error fetching balance:", e)
+			return None
+		finally:
+			connection.close()
+
+	def transfer_money(self, current_user, connect_func):
+		sender_account_id = current_user
+		receiver_email = input("Enter receiver email: ")
+
+		while True:
+			if not self.is_valid_email(receiver_email):
+				print("Invalid email format. Please enter a valid email address.")
+				continue
+			break
+
+		receiver_account_id = self.get_account_id_by_email(receiver_email)
+
+		if not receiver_account_id:
+			print("Receiver email does not exist in the system.")
+			return
+
+		while True:
+			try:
+				amount = float(input("Enter amount: "))
+				if amount <= 0:
+					print("Amount must be greater than 0.")
+					continue
+				break
+			except ValueError:
+				print("Invalid input for amount. Please enter a valid number.")
+
+		# Check sender balance
+		connection = self.connect_func()
+		cursor = connection.cursor()
+		cursor.execute("SELECT balance FROM accounts WHERE id = %s", (sender_account_id,))
+		sender_balance = cursor.fetchone()[0]
+		print(f"Sender balance: {sender_balance}")  # Debugging line
+
+		if sender_balance < amount:
+			print("Insufficient funds in your account.")
+			connection.close()
+			return
+
+		trans_type = 'transfer'
+
+		# Create transaction
+		self.create_transaction(sender_account_id, receiver_account_id, amount, trans_type)
+
+		# Update sender balance
+		self.update_balance(sender_account_id, sender_balance - amount)
+
+		# Get and update receiver balance
+		receiver_balance = self.get_balance(receiver_account_id)
+		if receiver_balance is not None:
+			self.update_balance(receiver_account_id, receiver_balance + amount)
+
+		connection.close()
 
 	def get_all_transactions(self):
 		connection = self.connect_func()

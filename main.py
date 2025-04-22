@@ -3,38 +3,104 @@ from account import Account
 from transactions import TransactionManager
 from db import connect
 
-def show_menu():
-    print("\n📋 Main Menu:")
-    print("1. Register New User")
-    print("2. Login")
-    print("3. Create Bank Account")
-    print("4. View All Accounts")
-    print("5. Transfer Money")
-    print("6. View All Transactions")
-    print("7. View Transaction by ID")
-    print("8. Update Transaction Type")
-    print("9. Delete Transaction")
-    print("0. Exit")
+"""
+    in database:
+        - users table:
+            CREATE TABLE users (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(100),
+                email VARCHAR(100) UNIQUE,
+                password VARCHAR(100),
+                balance FLOAT DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
 
-# 1. Register New User
+        - transactions table:
+
+            CREATE TABLE transactions (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT,
+                type ENUM('deposit', 'withdraw', 'transfer'),
+                amount FLOAT,
+                target_user_id INT DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id),
+                FOREIGN KEY (target_user_id) REFERENCES users(id)
+            );
+
+        - accounts table:
+            CREATE TABLE accounts (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                account_type VARCHAR(50) NOT NULL,
+                balance DECIMAL(10, 2) NOT NULL,
+                created_at DATETIME NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            );
+
+    libraries:
+        - mysql-connector-python => pip install mysql-connector-python
+        - bcrypt => command: pip install bcrypt
+
+"""
+
+def show_menu():
+    print("===== Bank System CLI =====")
+    print("1. User Operations")
+    print("2. Account Operations")
+    print("3. Transaction Operations")
+    print("0. Exit")
+    print("===========================")
+
+def user_menu():
+    print("===== User Operations =====")
+    print("1. Register New User") 
+    print("2. Login")
+    print("3. Delete User") 
+    print("0. Back to Main Menu")
+    print("===========================")
+
+def account_menu():
+    print("===== Account Operations =====")
+    print("1. Create Bank Account")
+    print("2. View All Accounts")
+    print("3. Deposit Money")
+    print("4. Withdraw Money")
+    print("5. Delete Account")
+    print("0. Back to Main Menu")
+    print("==============================")
+
+def transaction_menu():
+    print("===== Transaction Operations =====")
+    print("1. Transfer Money") 
+    print("2. View All Transactions")
+    print("0. Back to Main Menu")
+    print("===============================")
+
+def require_login(user):
+    if not user:
+        print("❌ - You must log in first.")
+        return False
+    return True
+
 def register_user():
     name = input("Enter name: ")
     email = input("Enter email: ")
     password = input("Enter password: ")
     users.register(name, email, password, connect)
 
-# 2. Login
 def login_user():
     email = input("Enter email: ")
     password = input("Enter password: ")
     user = users.login(email, password, connect)
-    print(user)
     return user if user else None
 
-# 3. Create Bank Account
+def delete_user():
+    email = input("Enter email of the user to delete: ")
+    users.delete(email, connect)
+
 def create_bank_account(current_user):
-    if not current_user:
-        print("\n❌ - You must log in first. :)")
+    if not require_login(current_user):
         return
 
     type = input("Enter account type: ")
@@ -43,65 +109,52 @@ def create_bank_account(current_user):
     
     account.create(user_id = current_user, account_type=type, initial_balance=balance)
 
-# 4. View All Accounts
-def get_all_accounts(current_user):
-    if not current_user:
-        print("\n❌ - You must log in first. :)")
+def deposit_money(current_user):
+    if not require_login(current_user):
         return
-        
-    account.get_all_accounts()
 
+    account.deposit_money(current_user)
 
-# 5. Transfer Money
-def transfer_money(current_user):
-    if not current_user:
-        print("\n❌ - You must log in first. :)")
+def withdraw_money(current_user):
+    if not require_login(current_user):
+        return
+
+    account.withdraw(current_user)
+
+def delete_account(current_user):
+	if not require_login(current_user):
+		return
+
+	account.delete_account_by_user(current_user)
+
+def get_accounts(current_user):
+    if not require_login(current_user):
         return
     
-    sender = int(input("Enter sender account number: "))
-    receiver = int(input("Enter receiver account number: "))
-    amount = float(input("Enter amount: "))
-    trans_type = input("Enter transaction type (e.g., transfer): ")
-    transactions.create_transaction(sender, receiver, amount, trans_type)
+    account.get_user_accounts(current_user)
 
+def transfer(current_user):
+    if not require_login(current_user):
+        return
+    
+    transactions.transfer_money(current_user, connect)
 
-# 6. View All Transactions
 def get_all_transactions(current_user):
-    if not current_user:
-        print("\n❌ - You must log in first. :)")
+    if not require_login(current_user):
         return
     
     transactions.get_all_transactions()
 
-
-# 7. View Transaction by ID
-def view_transaction_by_id(current_user):
-    if not current_user:
-        print("\n❌ - You must log in first. :)")
+# def view_transaction_by_id(current_user):
+    if not require_login(current_user):
         return
+    
     trans_id = int(input("Enter transaction ID: "))
     transactions.get_transaction_by_id(trans_id)
 
-# 8. Update Transaction Type
-def update_transaction_type(current_user):
-    if not current_user:
-        print("\n❌ - You must log in first. :)")
-        return
-    
-    trans_id = int(input("Enter transaction ID: "))
-    new_type = input("Enter new transaction type: ")
-    transactions.update_transaction_type(trans_id, new_type)
+def show_all_users():
+    User.get_all_users(connect)
 
-# 9. Delete Transaction
-def delete_transaction(current_user):
-    if not current_user:
-        print("\n❌ - You must log in first. :)")
-        return
-    
-    trans_id = int(input("Enter transaction ID to delete: "))
-    transactions.delete_transaction(trans_id)
-
-# 0. Exit Program
 def exit_program():
     print("Exiting the program.")
     return False
@@ -115,34 +168,74 @@ def main():
 
     current_user = None
 
-    actions = {
-        "1": register_user,
-        "2": login_user,
-        "3": lambda: create_bank_account(current_user),
-        "4": lambda: get_all_accounts(current_user),
-        "5": lambda: transfer_money(current_user),
-        "6": lambda:get_all_transactions(current_user),
-        "7": lambda:view_transaction_by_id(current_user),
-        "8": lambda:update_transaction_type(current_user),
-        "9": lambda:delete_transaction(current_user),
-        "0": exit_program
-    }
-
     while True:
         show_menu()
         choice = input("Choose an option: ")
 
-        action = actions.get(choice, None)
+        match choice:
+            case "1":
+                # User operations menu
+                while True:
+                    user_menu()
+                    user_choice = input("Choose a user operation: ")
 
-        if action:
-            if choice == "2":
-                current_user = action()
-            elif choice == "0":
-                if not action():
-                    break
-            else:
-                action()
-        else:
-            print("Invalid choice. Please try again.")
+                    match user_choice:
+                        case "1":
+                            register_user()
+                        case "2":
+                            current_user = login_user()
+                        case "3":
+                            delete_user()
+                        case "0":
+                            break
+                        case _:
+                            print("⚠️ Invalid choice. Please try again.")
+
+            case "2":
+                # Account operations menu
+                while True:
+                    account_menu()
+                    acc_choice = input("Choose an account operation: ")
+
+                    match acc_choice:
+                        case "1":
+                            create_bank_account(current_user)
+                        case "2":
+                            get_accounts(current_user)
+                        case "3":
+                            deposit_money(current_user)
+                        case "4":
+                            withdraw_money(current_user)
+                        case "5":
+                            delete_account(current_user)
+                        case "0":
+                            break
+                        case _:
+                            print("⚠️ Invalid choice. Please try again.")
+
+            case "3":
+                # Transaction operations menu
+                while True:
+                    transaction_menu()
+                    trans_choice = input("Choose a transaction operation: ")
+
+                    match trans_choice:
+                        case "1":
+                            transfer(current_user)
+                        case "2":
+                            get_all_transactions(current_user)
+                        case "0":
+                            break
+                        case _:
+                            print("⚠️ Invalid choice. Please try again.")
+
+            case "0":
+                print("👋 Exiting program. Goodbye!")
+                break
+
+            case _:
+                print("⚠️ Invalid main choice. Please try again.")
 
 main()
+
+# show_all_users()
