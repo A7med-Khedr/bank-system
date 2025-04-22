@@ -1,83 +1,84 @@
 import bcrypt
-from db import connect  # تأكد إنك عندك ملف db.py فيه دالة connect
+from db import connect
 
 class User:
-    @staticmethod
-    def login(email, password):
-        connection = connect()
-        cursor = connection.cursor()
+	
+	def __init__(self, connect_func):
+		self.connect_func = connect_func
 
-        cursor.execute("SELECT id, name, email, password FROM users WHERE email = %s", (email,))
-        user = cursor.fetchone()
+	def login(self, email, password, connect_func):
+		connection = self.connect_func()
+		cursor = connection.cursor()
 
-        if not user:
-            print("user not found")
-            connection.close()
-            return
+		cursor.execute("SELECT id, name, email, password FROM users WHERE email = %s", (email,))
+		user = cursor.fetchone()
 
-        user_id, name, email, hashed_password = user
+		if not user:
+			print("user not found")
+			connection.close()
+			return
 
-        if bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8')):
-            print("login successful for user:", name)
-            connection.close()
-            return user_id
-        else:
-            print("invalid password for the user.")
-            connection.close()
-            return None
+		user_id, name, email, hashed_password = user
 
-    @staticmethod
-    def register(name, email, password):
-        connection = connect()
-        cursor = connection.cursor()
+		if bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8')):
+			print("\n✅ login successful")
+			connection.close()
+			return user_id
+		else:
+			print("❌ invalid password for the user.")
+			connection.close()
+			return None
 
-        cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
-        existing_user = cursor.fetchone()
+	def register(self, name, email, password, connect_func):
+		connection = self.connect_func()
+		cursor = connection.cursor()
 
-        if existing_user:
-            print("user email already exists")
-            connection.close()
-            return
+		cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+		existing_user = cursor.fetchone()
 
-        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+		if existing_user:
+			print("user email already exists")
+			connection.close()
+			return
 
-        cursor.execute("INSERT INTO users (name, email, password) VALUES (%s, %s, %s)",
-                       (name, email, hashed_password))
+		hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
-        connection.commit()
-        print("user registered successfully")
-        connection.close()
+		cursor.execute("INSERT INTO users (name, email, password) VALUES (%s, %s, %s)",
+						(name, email, hashed_password))
 
-    @staticmethod
-    def delete(email):
-        connection = connect()
-        cursor = connection.cursor()
+		connection.commit()
+		print("user registered successfully ✅")
+		connection.close()
 
-        cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
-        user = cursor.fetchone()
+	def delete(self, email, connect_func):
+		connection = self.connect_func()
+		cursor = connection.cursor()
 
-        if not user:
-            print("user not found")
-            connection.close()
-            return
+		cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+		user = cursor.fetchone()
 
-        cursor.execute("DELETE FROM users WHERE email = %s", (email,))
-        connection.commit()
-        print("user deleted successfully")
-        connection.close()
+		if not user:
+			print("user not found")
+			connection.close()
+			return
 
-    @staticmethod
-    def print_all():
-        connection = connect()
-        cursor = connection.cursor()
+		cursor.execute("DELETE FROM users WHERE email = %s", (email,))
+		connection.commit()
+		print("user deleted successfully ✅")
+		connection.close()
 
-        cursor.execute("SELECT * FROM users")
-        users = cursor.fetchall()
+	def print_all(self):
+		connection = self.connect_func()
+		cursor = connection.cursor()
 
-        if users:
-            for user in users:
-                print("User:", user)
-        else:
-            print("no users found")
+		cursor.execute("SELECT * FROM users")
+		users = cursor.fetchall()
 
-        connection.close()
+		if users:
+			for user in users:
+				print("User:", user)
+		else:
+			print("no users found")
+
+		connection.close()
+

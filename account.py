@@ -1,10 +1,12 @@
 from datetime import datetime
-from db import connect
 
 class Account:
-    @staticmethod
-    def create(user_id, account_type, initial_balance):
-        connection = connect()
+    
+    def __init__(self, connect_func):
+        self.connect_func = connect_func
+          
+    def create(self, user_id, account_type, initial_balance):
+        connection = self.connect_func()
         cursor = connection.cursor()
 
         cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
@@ -16,16 +18,15 @@ class Account:
             return
 
         cursor.execute("INSERT INTO accounts (user_id, account_type, balance, created_at) VALUES (%s, %s, %s, %s)",
-                       (user_id, account_type, initial_balance, datetime.now()))
+                        (user_id, account_type, initial_balance, datetime.now()))
 
         connection.commit()
-        print("account created successfully")
+        print("\naccount created successfully ✅")
         connection.close()
         return True
 
-    @staticmethod
-    def get_user_accounts(user_id):
-        connection = connect()
+    def get_user_accounts(self, user_id):
+        connection = self.connect_func()
         cursor = connection.cursor()
 
         cursor.execute("SELECT * FROM accounts WHERE user_id = %s", (user_id,))
@@ -40,9 +41,8 @@ class Account:
         connection.close()
         return accounts
 
-    @staticmethod
-    def update_balance(account_id, new_balance):
-        connection = connect()
+    def update_balance(self, account_id, new_balance):
+        connection = self.connect_func()
         cursor = connection.cursor()
 
         cursor.execute("UPDATE accounts SET balance = %s WHERE id = %s", (new_balance, account_id))
@@ -51,9 +51,8 @@ class Account:
         connection.close()
         return True
 
-    @staticmethod
-    def delete(account_id):
-        connection = connect()
+    def delete(self, account_id):
+        connection = self.connect_func()
         cursor = connection.cursor()
 
         cursor.execute("DELETE FROM accounts WHERE id = %s", (account_id,))
@@ -62,30 +61,27 @@ class Account:
         connection.close()
         return True
 
-    @staticmethod
-    def get(account_id):
-        connection = connect()
+    def get(self, account_id):
+        connection = self.connect_func()
         cursor = connection.cursor()
         cursor.execute("SELECT * FROM accounts WHERE id = %s", (account_id,))
         account = cursor.fetchone()
         connection.close()
         return account
 
-    @staticmethod
-    def deposit(account_id, amount):
-        account = Account.get(account_id)
+    def deposit(self, account_id, amount):
+        account = self.get(account_id)
         if not account:
             print("Account not found.")
             return False
 
         new_balance = account[3] + amount
-        Account.update_balance(account_id, new_balance)
+        self.update_balance(account_id, new_balance)
         print(f"Deposited {amount} successfully.")
         return True
 
-    @staticmethod
-    def withdraw(account_id, amount):
-        account = Account.get(account_id)
+    def withdraw(self, account_id, amount):
+        account = self.get(account_id)
         if not account:
             print("Account not found.")
             return False
@@ -95,6 +91,22 @@ class Account:
             return False
 
         new_balance = account[3] - amount
-        Account.update_balance(account_id, new_balance)
+        self.update_balance(account_id, new_balance)
         print(f"Withdrawn {amount} successfully.")
         return True
+
+    def get_all_accounts(self):
+        connection = self.connect_func()
+        cursor = connection.cursor()
+
+        cursor.execute("SELECT * FROM accounts")
+        accounts = cursor.fetchall()
+
+        if not accounts:
+            print("No accounts found.")
+        else:
+            for acc in accounts:
+                print(f"\nAccount ID: {acc[0]}, User ID: {acc[1]}, Type: {acc[2]}, Balance: {acc[3]}, Created At: {acc[4]}")
+
+        connection.close()
+        return accounts

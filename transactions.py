@@ -1,3 +1,4 @@
+from db import connect
 class TransactionManager:
 
 	def __init__(self, connect_func):
@@ -79,7 +80,7 @@ class TransactionManager:
 					""")
 				return transactions
 			else:
-				print("No transactions found.")
+				print("\nNo transactions found. ❌")
 				return None
 
 		finally:
@@ -105,7 +106,7 @@ class TransactionManager:
 				""")
 				return transaction
 			else:
-				print(f"No transaction found with ID {trans_id}")
+				print(f"\nNo transaction found with ID {trans_id} ❌")
 				return None
 
 		finally:
@@ -142,10 +143,10 @@ class TransactionManager:
 			if transaction:
 				cursor.execute("DELETE FROM transactions WHERE id = %s", (trans_id,))
 				connection.commit()
-				print(f"Transaction deleted successfully for ID {trans_id}")
+				print(f"\nTransaction deleted successfully for ID {trans_id}")
 				return trans_id
 			else:
-				print(f"No transaction found with ID {trans_id}")
+				print(f"\nNo transaction found with ID {trans_id}")
 				return None
 
 		finally:
