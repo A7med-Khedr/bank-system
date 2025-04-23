@@ -59,7 +59,7 @@ class TransactionManager:
 		try:
 			cursor.execute("UPDATE accounts SET balance = %s WHERE id = %s", (new_balance, account_id))
 			connection.commit()
-			print(f"Balance updated successfully for account ID {account_id}")
+			print(f"Balance updated successfully for account ID {account_id} and new balance is { new_balance }")
 		except Exception as e:
 			print("Error updating balance:", e)
 			connection.rollback()
@@ -91,7 +91,7 @@ class TransactionManager:
 		while True:
 			if not self.is_valid_email(receiver_email):
 				print("Invalid email format. Please enter a valid email address.")
-				continue
+				return
 			break
 
 		receiver_account_id = self.get_account_id_by_email(receiver_email)
@@ -113,12 +113,13 @@ class TransactionManager:
 		# Check sender balance
 		connection = self.connect_func()
 		cursor = connection.cursor()
-		cursor.execute("SELECT balance FROM accounts WHERE id = %s", (sender_account_id,))
+		cursor.execute("SELECT balance FROM accounts WHERE user_id = %s", (sender_account_id,))
 		sender_balance = cursor.fetchone()
-		if not sender_balance is None:
+
+		if sender_balance is None:
 			print(f"account not found or balance is None")
 			return
-		sender = sender_balance
+		sender = sender_balance[0]
 		print(f"Sender balance: {sender}")
 
 		if sender < amount:
@@ -132,7 +133,7 @@ class TransactionManager:
 		self.create_transaction(sender_account_id, receiver_account_id, amount, trans_type)
 
 		# Update sender balance
-		self.update_balance(sender_account_id, sender_balance - amount)
+		self.update_balance(sender_account_id, sender - amount)
 
 		# Get and update receiver balance
 		receiver_balance = self.get_balance(receiver_account_id)
