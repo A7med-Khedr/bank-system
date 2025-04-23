@@ -8,6 +8,6 @@ def connect():
     return mysql.connector.connect(
         host="localhost",
         user="khedr",
-        password="khedr",
+        password="Ahmed#Khedr",
         database="bank_system"
     )

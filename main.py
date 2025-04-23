@@ -41,7 +41,6 @@ from db import connect
     libraries:
         - mysql-connector-python => pip install mysql-connector-python
         - bcrypt => command: pip install bcrypt
-
 """
 
 def show_menu():

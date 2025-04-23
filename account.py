@@ -33,6 +33,15 @@ class Account:
 		cursor.execute("SELECT * FROM accounts WHERE user_id = %s", (user_id,))
 		accounts = cursor.fetchall()
 
+		if not accounts:
+			print("⚠️ No accounts found for this user.")
+			return
+		
+		else:
+			print("User Accounts:")
+			for account in accounts:
+				print(f"Type: {account[2]}, Balance: {account[3]}, Created At: {account[4]}")
+
 		connection.close()
 		return accounts
 

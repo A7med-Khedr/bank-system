@@ -1,4 +1,5 @@
 import re
+from decimal import Decimal
 
 
 class TransactionManager:
@@ -39,9 +40,10 @@ class TransactionManager:
 
 		try:
 			cursor.execute(
-				"INSERT INTO transactions (from_account_id, to_account_id, amount, transaction_type) VALUES (%s, %s, %s, %s)",
+				"INSERT INTO transactions (user_id, target_user_id, amount, type) VALUES (%s, %s, %s, %s)",
 				(sender_account_id, receiver_account_id, amount, trans_type)
 			)
+
 			connection.commit()
 			print("Transaction created successfully!")
 		except Exception as e:
@@ -61,7 +63,7 @@ class TransactionManager:
 		except Exception as e:
 			print("Error updating balance:", e)
 			connection.rollback()
-		finally:
+		finally: 
 			connection.close()
 
 	def get_balance(self, account_id):
@@ -95,12 +97,12 @@ class TransactionManager:
 		receiver_account_id = self.get_account_id_by_email(receiver_email)
 
 		if not receiver_account_id:
-			print("Receiver email does not exist in the system.")
+			print("\nReceiver email does not exist in the system.\nor the account is not found.\n")
 			return
 
 		while True:
 			try:
-				amount = float(input("Enter amount: "))
+				amount = Decimal(input("Enter amount: "))
 				if amount <= 0:
 					print("Amount must be greater than 0.")
 					continue
@@ -112,10 +114,14 @@ class TransactionManager:
 		connection = self.connect_func()
 		cursor = connection.cursor()
 		cursor.execute("SELECT balance FROM accounts WHERE id = %s", (sender_account_id,))
-		sender_balance = cursor.fetchone()[0]
-		print(f"Sender balance: {sender_balance}")  # Debugging line
+		sender_balance = cursor.fetchone()
+		if not sender_balance is None:
+			print(f"account not found or balance is None")
+			return
+		sender = sender_balance
+		print(f"Sender balance: {sender}")
 
-		if sender_balance < amount:
+		if sender < amount:
 			print("Insufficient funds in your account.")
 			connection.close()
 			return
