@@ -33,7 +33,6 @@ class TransactionManager:
 		finally:
 			connection.close()
 
-
 	def create_transaction(self, sender_account_id, receiver_account_id, amount, trans_type):
 		connection = self.connect_func()
 		cursor = connection.cursor()
