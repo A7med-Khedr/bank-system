@@ -2,6 +2,9 @@ from auth import User
 from account import Account
 from transactions import TransactionManager
 from db import connect
+import tkinter as tk
+from tkinter import ttk
+from gui import show_transactions, add_transaction
 
 """
     in database:
@@ -238,3 +241,52 @@ def main():
 main()
 
 # show_all_users()
+
+transactions = [
+    {"transaction_id": 1, "date": "2025-04-20", "amount": 500, "type": "Deposit", "from_account": "12345", "to_account": "67890"},
+    {"transaction_id": 2, "date": "2025-04-21", "amount": 300, "type": "Withdrawal", "from_account": "67890", "to_account": "12345"},
+    {"transaction_id": 3, "date": "2025-04-22", "amount": 1500, "type": "Deposit", "from_account": "11223", "to_account": "44556"},
+]
+
+root = tk.Tk()
+root.title("System Bank - Transactions")
+root.geometry("800x600")
+
+frame = tk.Frame(root)
+frame.pack(pady=20)
+
+tree = ttk.Treeview(frame, columns=("Transaction ID", "Date", "Amount", "Type", "From Account", "To Account"), show="headings")
+tree.heading("Transaction ID", text="Transaction ID")
+tree.heading("Date", text="Date")
+tree.heading("Amount", text="Amount")
+tree.heading("Type", text="Type")
+tree.heading("From Account", text="From Account")
+tree.heading("To Account", text="To Account")
+tree.pack(fill=tk.BOTH, expand=True)
+
+frame2 = tk.Frame(root)
+frame2.pack(pady=20)
+
+label_from_account = tk.Label(frame2, text="From Account:")
+label_from_account.grid(row=0, column=0, padx=10, pady=5)
+entry_from_account = tk.Entry(frame2)
+entry_from_account.grid(row=0, column=1, padx=10, pady=5)
+
+label_to_account = tk.Label(frame2, text="To Account:")
+label_to_account.grid(row=1, column=0, padx=10, pady=5)
+entry_to_account = tk.Entry(frame2)
+entry_to_account.grid(row=1, column=1, padx=10, pady=5)
+
+label_amount = tk.Label(frame2, text="Amount:")
+label_amount.grid(row=2, column=0, padx=10, pady=5)
+entry_amount = tk.Entry(frame2)
+entry_amount.grid(row=2, column=1, padx=10, pady=5)
+
+button_add_transaction = tk.Button(frame2, text="Add Transaction", command=lambda: add_transaction(entry_from_account, entry_to_account, entry_amount, transactions, tree))
+button_add_transaction.grid(row=3, columnspan=2, pady=20)
+
+button_show_transactions = tk.Button(root, text="Show Transactions", command=lambda: show_transactions(tree, transactions))
+button_show_transactions.pack(pady=20)
+show_transactions(tree, transactions)
+
+root.mainloop()
